@@ -1,0 +1,9 @@
+[submodule "engines/football"]
+	path = engines/football
+	url = https://github.com/ForegatePrediction/FG-football-prediction.git
+[submodule "engines/basketball"]
+	path = engines/basketball
+	url = https://github.com/ForegatePrediction/FG-basketball-prediction.git
+[submodule "engines/esports"]
+	path = engines/esports
+	url = https://github.com/ForegatePrediction/FG-esports-prediction.git

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: foregate-prediction-gateway
+    runtime: python
+    plan: free
+    buildCommand: ""
+    startCommand: python3 gateway.py
+    envVars:
+      - key: PORT
+        value: 8000
