@@ -35,20 +35,14 @@ _procs = {}
 
 
 def _launch():
+    # 仅拉起子进程,不阻塞等待——父进程立即开始监听,子进程在后台启动。
+    # 这样 Render 从休眠唤醒后毫秒级即可响应 /ping,避免保活探测超时被误判 down。
     for name, e in ENGINES.items():
         env = dict(os.environ, PORT=str(e["port"]))
         p = subprocess.Popen([sys.executable, "server.py"],
                              cwd=os.path.join(ROOT, e["dir"]), env=env,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         _procs[name] = p
-    # 等各引擎起来(探 /health)
-    for name, e in ENGINES.items():
-        for _ in range(40):
-            try:
-                urllib.request.urlopen(f"http://127.0.0.1:{e['port']}/health", timeout=1).read()
-                break
-            except Exception:
-                time.sleep(0.5)
 
 
 def _norm_type(t):
@@ -91,6 +85,10 @@ class H(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         path = u.path.rstrip("/") or "/"
         q = parse_qs(u.query)
+
+        if path == "/ping":
+            # 超轻保活探测:父进程一起就立即 200,不探子进程 → 唤醒瞬间可响应
+            return self._send(200, {"status": "ok"})
 
         if path in ("/", "/health"):
             import json

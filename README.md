@@ -26,6 +26,7 @@ On startup the three engines' `server.py` run as child processes on internal por
 
 | 路由 Route | 说明 |
 |---|---|
+| `GET /ping` | 超轻保活探测(唤醒瞬间即 200)· ultra-light keep-alive |
 | `GET /health` | 聚合三引擎健康状态 · aggregated health |
 | `GET /predict?type=football&categoryId=30118&a=Arsenal&b=Chelsea` | 足球预测 |
 | `GET /predict?type=basketball&categoryId=30163&a=Lakers&b=Celtics` | 篮球预测 |
