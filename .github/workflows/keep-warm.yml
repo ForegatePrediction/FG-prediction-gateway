@@ -1,0 +1,21 @@
+name: keep-warm
+# 每 ~10 分钟 ping 一次网关,压住 Render 免费档 15 分钟休眠线,让实例永不休眠。
+# 公开仓库 Actions 分钟数无限免费;/ping 冷启动也几秒返回,120s 超时足以等过唤醒。
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /ping (retry, wait out cold start)
+        run: |
+          URL="https://foregate-prediction-gateway.onrender.com/ping"
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 "$URL" || echo 000)
+            echo "ping #$i -> HTTP $code"
+            if [ "$code" = "200" ]; then echo "warm ✔"; exit 0; fi
+            sleep 20
+          done
+          echo "still cold after 3 tries"; exit 1
