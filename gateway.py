@@ -81,6 +81,14 @@ class H(BaseHTTPRequestHandler):
         for k, v in CORS.items(): self.send_header(k, v)
         self.end_headers()
 
+    def do_HEAD(self):
+        # 探活工具(UptimeRobot 等)默认用 HEAD;不实现会返回 501 被误判 down。
+        # HEAD 只回头不回体,任意路径直接 200,唤醒瞬间即可响应。
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        for k, v in CORS.items(): self.send_header(k, v)
+        self.end_headers()
+
     def do_GET(self):
         u = urlparse(self.path)
         path = u.path.rstrip("/") or "/"
