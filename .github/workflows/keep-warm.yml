@@ -1,23 +1,31 @@
-name: keep-warm
-# 每 5 分钟触发,且每次运行内部循环 ping ~7 分钟(6 次,间隔 80s)。
-# 相邻运行覆盖重叠,即使 GitHub 定时有抖动/延迟,焐热也几乎不断档,压住 Render 15 分钟休眠线。
-# 公开仓库 Actions 分钟数无限免费;/ping 轻量,120s 超时足以等过冷启动。
+name: gateway-health
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: gateway-health
+  cancel-in-progress: false
 jobs:
-  warm:
+  health:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Keep the gateway warm (~7 min loop)
+      - name: Check active VPS gateway and engines
+        env:
+          GATEWAY_URL: ${{ vars.GATEWAY_URL || 'https://gateway.watchlived.cc' }}
         run: |
-          URL="https://foregate-prediction-gateway.onrender.com/ping"
-          ok=0
-          for i in $(seq 1 6); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 "$URL" || echo 000)
-            echo "$(date -u +%H:%M:%S) ping #$i -> HTTP $code"
-            [ "$code" = "200" ] && ok=1
-            [ "$i" -lt 6 ] && sleep 80
-          done
-          [ "$ok" = "1" ] && echo "warm ✔" || { echo "never got 200"; exit 1; }
+          curl --fail --silent --show-error --retry 2 --max-time 30 "$GATEWAY_URL/ping"
+          curl --fail --silent --show-error --retry 2 --max-time 45 "$GATEWAY_URL/health" > health.json
+          python3 - <<'PYTHON'
+          import json, os
+          h = json.load(open('health.json'))
+          engines = h.get('engines', {})
+          assert h.get('status') == 'ok', h
+          for name in ('football', 'basketball', 'esports', 'price'):
+              assert engines.get(name, {}).get('status') == 'ok', (name, engines.get(name))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('Production health passed.\n\n```json\n' + json.dumps(h, indent=2) + '\n```\n')
+          PYTHON
