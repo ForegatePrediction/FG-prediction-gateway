@@ -20,12 +20,17 @@ jobs:
           curl --fail --silent --show-error --retry 2 --max-time 30 "$GATEWAY_URL/ping"
           curl --fail --silent --show-error --retry 2 --max-time 45 "$GATEWAY_URL/health" > health.json
           python3 - <<'PYTHON'
-          import json, os
+          import json, os, time
           h = json.load(open('health.json'))
           engines = h.get('engines', {})
           assert h.get('status') == 'ok', h
           for name in ('football', 'basketball', 'esports', 'price'):
               assert engines.get(name, {}).get('status') == 'ok', (name, engines.get(name))
+          for symbol in ('BTCUSDT', 'ETHUSDT'):
+              buf = engines['price'].get('buffers', {}).get(symbol, {})
+              assert buf.get('buffered_candles', 0) >= 31, (symbol, 'not ready')
+              assert time.time() - buf.get('last_poll_ok_ts', 0) < 180, (symbol, 'stale quote feed')
+              assert buf.get('last_error') is None, (symbol, 'quote feed error')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('Production health passed.\n\n```json\n' + json.dumps(h, indent=2) + '\n```\n')
           PYTHON
