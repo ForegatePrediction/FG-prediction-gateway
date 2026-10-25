@@ -26,6 +26,9 @@ jobs:
           assert h.get('status') == 'ok', h
           for name in ('football', 'basketball', 'esports', 'price'):
               assert engines.get(name, {}).get('status') == 'ok', (name, engines.get(name))
+          for sport in ('football', 'basketball', 'esports'):
+              source = h.get('source_refresh', {}).get(sport, {})
+              assert source.get('status') == 'ok', (sport, 'daily collection stale or failed', source)
           for symbol in ('BTCUSDT', 'ETHUSDT'):
               buf = engines['price'].get('buffers', {}).get(symbol, {})
               assert buf.get('buffered_candles', 0) >= 31, (symbol, 'not ready')
